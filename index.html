@@ -310,9 +310,13 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
       <div id="rSobres"></div>
       <div class="sum" id="rResto"></div>
     </div>
-    <button class="act" id="pdfBtn" type="button" style="width:100%">Descargar mi foto en PDF</button>
-    <button class="act" id="waBtn" type="button" style="width:100%;margin-top:10px;background:#1F7A4D;box-shadow:0 14px 26px -14px rgba(31,122,77,.9)">Abrir WhatsApp de Tania</button>
-    <p class="small muted" style="margin-top:14px;text-align:center">Descarga tu PDF, abre el chat de Tania y adjúntalo junto con tu audio.</p>
+    <button class="act" id="shareBtn" type="button" style="width:100%">Enviar mi foto</button>
+    <p class="small muted" id="shareHint" style="margin-top:12px;text-align:center">Se abre el menú de tu celular. Elige WhatsApp y mándasela a Tania.</p>
+    <div id="fallback" style="display:none;margin-top:6px">
+      <button class="act" id="pdfBtn" type="button" style="width:100%">Descargar mi foto en PDF</button>
+      <button class="act" id="waBtn" type="button" style="width:100%;margin-top:10px;background:#1F7A4D;box-shadow:0 14px 26px -14px rgba(31,122,77,.9)">Abrir WhatsApp de Tania</button>
+      <p class="small muted" style="margin-top:12px;text-align:center">Descarga tu PDF, abre el chat de Tania y adjúntalo junto con tu audio.</p>
+    </div>
   </section>
 </div>
 
@@ -431,9 +435,8 @@ function pdfTexto(t,x,y,max,doc,lh){
   for(var i=0;i<ls.length;i++){ doc.text(ls[i],x,y); y+=lh; }
   return y;
 }
-$("pdfBtn").addEventListener("click",function(){
-  var b=this;
-  if(!window.jspdf||!window.jspdf.jsPDF){ b.textContent="No se pudo generar. Intenta de nuevo."; return; }
+function construirPDF(){
+  if(!window.jspdf||!window.jspdf.jsPDF) return null;
   try{
     var D=window.jspdf.jsPDF, doc=new D({unit:"mm",format:"a4"});
     var W=210, M=20, mx2=W-M*2;
@@ -481,9 +484,49 @@ $("pdfBtn").addEventListener("click",function(){
 
     doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(139,107,115);
     doc.text("Trabado 360  ·  Programa Retorno 360",M,282);
-    doc.save("Mi foto - Dia 2 - Reto de 5 dias.pdf");
-    b.textContent="PDF descargado";
-  }catch(e){ b.textContent="No se pudo generar. Intenta de nuevo."; }
+    return doc;
+  }catch(e){ return null; }
+}
+var NOMBRE_PDF="Mi foto - Dia 2 - Reto de 5 dias.pdf";
+
+function mostrarFallback(msg){
+  $("shareBtn").style.display="none";
+  $("shareHint").textContent = msg || "Descarga tu foto y mándasela a Tania por WhatsApp.";
+  $("fallback").style.display="block";
+}
+
+$("shareBtn").addEventListener("click",async function(){
+  var b=this;
+  b.textContent="Preparando...";
+  var doc=construirPDF();
+  if(!doc){ mostrarFallback("No se pudo preparar el envío. Usa estos botones."); return; }
+  try{
+    var blob=doc.output("blob");
+    var file=new File([blob], NOMBRE_PDF, {type:"application/pdf"});
+    if(navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
+      await navigator.share({
+        files:[file],
+        title:"Mi foto del Día 2",
+        text:"Hola Tania, te mando mi foto del Día 2 del reto."
+      });
+      b.textContent="Enviado";
+      $("shareHint").textContent="Si no alcanzaste a mandarla, toca otra vez.";
+      return;
+    }
+    doc.save(NOMBRE_PDF);
+    mostrarFallback("Tu foto se descargó. Ahora ábrela en WhatsApp y mándasela a Tania.");
+  }catch(e){
+    if(e && e.name==="AbortError"){ b.textContent="Enviar mi foto"; return; }
+    try{ doc.save(NOMBRE_PDF); }catch(e2){}
+    mostrarFallback("Tu foto se descargó. Ahora ábrela en WhatsApp y mándasela a Tania.");
+  }
+});
+
+$("pdfBtn").addEventListener("click",function(){
+  var d=construirPDF();
+  if(!d){ this.textContent="No se pudo generar. Intenta de nuevo."; return; }
+  d.save(NOMBRE_PDF);
+  this.textContent="PDF descargado";
 });
 $("waBtn").addEventListener("click",function(){
   var t="Hola Tania, soy [tu nombre]. Te mando mi foto del Dia 2 del reto. Le adjunto el PDF y mi audio.";
