@@ -338,7 +338,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
 
 <div class="nav">
   <div class="inner">
-    <button class="ghost" id="back" type="button">Atrás</button>
+    <button class="ghost" id="back" type="button">← Atrás</button>
     <button class="act" id="next" type="button">Siguiente</button>
   </div>
 </div>
@@ -423,14 +423,17 @@ function show(){
   for(var i=1;i<=LAST;i++){ $("s"+i).classList.toggle("on", i===step); }
   var bars=document.querySelectorAll(".steps i");
   for(var j=0;j<bars.length;j++){ bars[j].classList.toggle("on", j<step); }
-  $("back").style.display = step===1?"none":"block";
+
   $("next").style.display = step===LAST?"none":"block";
   $("next").textContent = step===LAST-1?"Ver mi foto":"Siguiente";
   window.scrollTo(0,0);
   guard();
 }
 $("next").addEventListener("click",function(){ if(!ready())return; step++; if(step===LAST) resumen(); show(); });
-$("back").addEventListener("click",function(){ if(step>1){step--; show();} });
+$("back").addEventListener("click",function(){
+  if(step===1){ $("flow").classList.remove("on"); $("cover").style.display="flex"; window.scrollTo(0,0); return; }
+  step--; show();
+});
 
 var plano="", DATA={sobres:[],horas:"",respaldo:"",deDonde:"",f1:"",f2:""};
 function resumen(){
